@@ -1,0 +1,175 @@
+"use client"
+
+import React, { useState, Suspense } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { AlertCircle, Loader2, Mail, Lock, User } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+
+function SignupForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect_to') || '/'
+  const supabase = createClient()
+
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    // Basic Validation
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.')
+      setIsLoading(false)
+      return
+    }
+
+    const cleanUsername = username.trim().toLowerCase()
+    if (cleanUsername.length < 3 || !/^[a-z0-9_]+$/.test(cleanUsername)) {
+      setError('Username must be at least 3 characters and contain only letters, numbers, and underscores.')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      // 1. Check if username is already taken in the public.users table
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('username')
+        .eq('username', cleanUsername)
+        .maybeSingle()
+
+      if (checkError) throw checkError
+      if (existingUser) {
+        throw new Error('That username is already taken. Try another one.')
+      }
+
+      // 2. Sign up the user (passes username via metadata to be handled by our DB trigger)
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: cleanUsername,
+            display_name: username.trim(),
+          }
+        }
+      })
+
+      if (authError) throw authError
+
+      // 3. Success! Redirect back to home or intended destination
+      router.push(`${redirectTo}?message=Welcome to the Junkyard!`)
+      router.refresh()
+      
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="w-full max-w-md mx-auto bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl overflow-hidden mt-12 mb-24">
+      <div className="p-8">
+        <div className="text-center mb-8">
+          <h1 className="font-bebas-neue text-5xl text-[var(--color-cream)] tracking-wide uppercase mb-2">
+            Join the Junkyard
+          </h1>
+          <p className="text-[var(--color-mid-gray)] text-sm">
+            Post it. Pay a buck. Keep it out of a landfill.
+          </p>
+        </div>
+
+        {error && (
+          <div className="flex items-center p-3 mb-6 text-sm text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg">
+            <AlertCircle size={16} className="mr-2 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSignup} className="space-y-5">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[var(--color-mid-gray)] uppercase tracking-wider">Username</label>
+            <div className="relative">
+              <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-mid-gray)]" />
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-[#222] border border-[#444] rounded-lg text-[var(--color-cream)] focus:border-[var(--color-rust)] focus:outline-none transition-colors"
+                placeholder="junk_master_99"
+              />
+            </div>
+            <p className="text-[10px] text-[#666] mt-1">Letters, numbers, and underscores only.</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[var(--color-mid-gray)] uppercase tracking-wider">Email</label>
+            <div className="relative">
+              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-mid-gray)]" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-[#222] border border-[#444] rounded-lg text-[var(--color-cream)] focus:border-[var(--color-rust)] focus:outline-none transition-colors"
+                placeholder="you@example.com"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[var(--color-mid-gray)] uppercase tracking-wider">Password</label>
+            <div className="relative">
+              <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-mid-gray)]" />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-[#222] border border-[#444] rounded-lg text-[var(--color-cream)] focus:border-[var(--color-rust)] focus:outline-none transition-colors"
+                placeholder="••••••••"
+              />
+            </div>
+            <p className="text-[10px] text-[#666] mt-1">Must be at least 8 characters long.</p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex items-center justify-center py-3 mt-4 bg-[var(--color-rust)] hover:bg-opacity-90 disabled:opacity-50 text-[var(--color-cream)] font-bold rounded-lg uppercase tracking-wider transition-colors"
+          >
+            {isLoading ? <Loader2 size={20} className="animate-spin" /> : 'Create Account'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-[#111] border-t border-[#333] p-6 text-center">
+        <p className="text-[var(--color-mid-gray)] text-sm">
+          Already have an account?{' '}
+          <Link href={`/login${redirectTo !== '/' ? `?redirect_to=${encodeURIComponent(redirectTo)}` : ''}`} className="text-[var(--color-rust)] font-bold hover:underline">
+            Log in
+          </Link>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <div className="container mx-auto px-4 flex-grow flex items-center justify-center min-h-[calc(100vh-16rem)]">
+      <Suspense fallback={<div className="flex items-center justify-center p-24"><Loader2 size={48} className="animate-spin text-[var(--color-rust)]" /></div>}>
+        <SignupForm />
+      </Suspense>
+    </div>
+  )
+}

@@ -1,0 +1,33 @@
+{
+  "name": "absolutejunkyard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+    },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "@supabase/supabase-js": "latest",
+    "@supabase/ssr": "latest",
+    "stripe": "latest",
+    "lucide-react": "latest",
+    "leaflet": "latest",
+    "react-leaflet": "latest",
+    "@netlify/functions": "latest",
+    "@google/generative-ai": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/leaflet": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest"
+  }
+}
