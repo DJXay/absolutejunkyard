@@ -19,7 +19,9 @@
     "leaflet": "latest",
     "react-leaflet": "latest",
     "@netlify/functions": "latest",
-    "@google/generative-ai": "latest"
+    "@google/generative-ai": "latest",
+    "autoprefixer": "latest",
+    "postcss": "latest"
   },
   "devDependencies": {
     "typescript": "latest",
