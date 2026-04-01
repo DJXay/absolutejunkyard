@@ -1,5 +1,5 @@
 {
-  "name": "absolutejunkyard",
+  "name": "absolute-junkyard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,29 +7,21 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
-    },
+  },
   "dependencies": {
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "@supabase/supabase-js": "latest",
-    "@supabase/ssr": "latest",
-    "stripe": "latest",
-    "lucide-react": "latest",
-    "leaflet": "latest",
-    "react-leaflet": "latest",
-    "@netlify/functions": "latest",
-    "@google/generative-ai": "latest",
-    "autoprefixer": "latest",
-    "postcss": "latest"
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "lucide-react": "^0.378.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0",
+    "tailwindcss": "3.4.1"
   },
   "devDependencies": {
-    "typescript": "latest",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@types/leaflet": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest"
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8",
+    "typescript": "^5"
   }
 }
