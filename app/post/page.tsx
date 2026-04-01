@@ -1,59 +1,192 @@
+"use client";
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Camera, Upload, X, Loader2 } from 'lucide-react';
+
 export default function PostItemPage() {
-  return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+  const router = useRouter();
+  const supabase = createClientComponentClient();
+  
+  // Form State
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('General');
+  
+  // Image State
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Handle image selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setImages((prev) => [...prev, ...newFiles]);
+
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      setPreviews((prev) => [...prev, ...newPreviews]);
+    }
+  };
+
+  // Remove a selected image before uploading
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+    setPreviews(previews.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUploading(true);
+
+    try {
+      const imageUrls: string[] = [];
+
+      // 1. Upload Images to Supabase Storage
+      for (const file of images) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}-${Date.now()}.${fileExt}`;
+        const filePath = `items/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('item-photos')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get the Public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('item-photos')
+          .getPublicUrl(filePath);
         
-        {/* Header Section */}
-        <div className="bg-slate-900 p-8 text-white text-center">
-          <h1 className="text-3xl font-bold mb-2">List Your Junk</h1>
-          <p className="text-slate-400">One man's junk is another's treasure.</p>
+        imageUrls.push(publicUrl);
+      }
+
+      // 2. Save Item Details to Database
+      const { error: dbError } = await supabase
+        .from('items')
+        .insert([
+          {
+            title,
+            description,
+            price: parseFloat(price),
+            category,
+            image_urls: imageUrls, // Storing as an array
+            created_at: new Date(),
+          },
+        ]);
+
+      if (dbError) throw dbError;
+
+      router.push('/browse');
+      router.refresh();
+    } catch (error) {
+      console.error('Error posting item:', error);
+      alert('Failed to post item. Check console for details.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto p-6 bg-slate-900 text-white rounded-lg shadow-xl mt-10">
+      <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
+        <Camera className="text-blue-400" /> Post New Junk
+      </h1>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Image Upload Area */}
+        <div className="border-2 border-dashed border-slate-700 p-4 rounded-lg bg-slate-800/50">
+          <label className="block text-sm font-medium mb-2 text-slate-300">Item Photos</label>
+          
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            {previews.map((url, index) => (
+              <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-slate-600">
+                <img src={url} alt="Preview" className="object-cover w-full h-full" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(index)}
+                  className="absolute top-1 right-1 bg-red-500 rounded-full p-1 hover:bg-red-600"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            
+            <label className="flex flex-col items-center justify-center aspect-square rounded-md border border-slate-600 bg-slate-700/50 cursor-pointer hover:bg-slate-700 transition">
+              <Upload className="text-slate-400 mb-1" size={24} />
+              <span className="text-xs text-slate-400">Add Photo</span>
+              <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+            </label>
+          </div>
         </div>
 
-        {/* The Form */}
-        <form className="p-8 space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-1">Item Title</label>
+          <input
+            required
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-slate-700 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="What are you getting rid of?"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Item Name</label>
-            <input type="text" placeholder="e.g. Vintage Soul Records" className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition" />
+            <label className="block text-sm font-medium mb-1">Price ($)</label>
+            <input
+              required
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="w-full p-3 bg-slate-800 border border-slate-700 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="0.00"
+            />
           </div>
-
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
-            <textarea rows={4} placeholder="Describe the condition, history, etc." className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition"></textarea>
+            <label className="block text-sm font-medium mb-1">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full p-3 bg-slate-800 border border-slate-700 rounded outline-none"
+            >
+              <option>General</option>
+              <option>Electronics</option>
+              <option>Tools</option>
+              <option>Auto Parts</option>
+              <option>Household</option>
+            </select>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Asking Price</label>
-              <div className="relative">
-                <span className="absolute left-3 top-3 text-slate-500">$</span>
-                <input type="number" className="w-full p-3 pl-8 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00" />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Category</label>
-              <select className="w-full p-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                <option>Electronics</option>
-                <option>Music/Records</option>
-                <option>Tools</option>
-                <option>Other</option>
-              </select>
-            </div>
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <textarea
+            required
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-slate-700 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="Tell us about the condition, age, etc."
+          />
+        </div>
 
-          {/* Fee Notice: The "Admin" Logic */}
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-blue-800 font-medium italic">Standard Listing Fee</span>
-              <span className="text-lg font-bold text-blue-900">$1.00</span>
-            </div>
-          </div>
-
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transform transition active:scale-95">
-            Post to the Junkyard
-          </button>
-        </form>
-      </div>
+        <button
+          type="submit"
+          disabled={isUploading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {isUploading ? (
+            <><Loader2 className="animate-spin" /> Finalizing Post...</>
+          ) : (
+            'List Item for Sale'
+          )}
+        </button>
+      </form>
     </div>
-  )
+  );
 }
