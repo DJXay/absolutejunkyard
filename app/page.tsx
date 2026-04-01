@@ -21,7 +21,7 @@ export default function HomePage() {
             <div className="h-40 bg-slate-200 rounded-lg mb-4 flex items-center justify-center">
               <span className="text-slate-400">Item Image</span>
             </div>
-            <h3 className="font-bold text-lg">Vintage Radio</h3>
+            <h3 className="font-bold text-lg">Vintage Electronics</h3>
             <p className="text-slate-600 text-sm mb-4">Perfect for a SoulZoneLive enthusiast.</p>
             <button className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium">
               View Details
