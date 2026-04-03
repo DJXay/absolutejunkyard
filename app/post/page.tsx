@@ -51,14 +51,14 @@ export default function PostItemPage() {
         const filePath = `items/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('item-photos')
+          .from('ITEM-PHOTOS')
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
         // Get the Public URL
         const { data: { publicUrl } } = supabase.storage
-          .from('item-photos')
+         .from('ITEM-PHOTOS')
           .getPublicUrl(filePath);
         
         imageUrls.push(publicUrl);
