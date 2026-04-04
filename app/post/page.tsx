@@ -53,7 +53,7 @@ export default function PostItemPage() {
         console.log(`Starting upload for: ${fileName}`);
 
         const { error: uploadError } = await supabase.storage
-          .from('item-photos')
+          .from('ITEM-PHOTOS')
           .upload(filePath, file);
 
         if (uploadError) {
