@@ -8,13 +8,13 @@ import { Camera, Upload, X, Loader2 } from 'lucide-react';
 export default function PostItemPage() {
   const router = useRouter();
   const supabase = createClientComponentClient();
-  
+
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('General');
-  
+
   // Image State
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -50,21 +50,29 @@ export default function PostItemPage() {
         const fileName = `${Math.random()}-${Date.now()}.${fileExt}`;
         const filePath = `items/${fileName}`;
 
+        console.log(`Starting upload for: ${fileName}`);
+
         const { error: uploadError } = await supabase.storage
           .from('ITEM-PHOTOS')
           .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Storage Upload Error:', uploadError);
+          throw uploadError;
+        }
 
         // Get the Public URL
         const { data: { publicUrl } } = supabase.storage
-         .from('ITEM-PHOTOS')
+          .from('ITEM-PHOTOS')
           .getPublicUrl(filePath);
-        
+
+        // FIXED: This must be INSIDE the loop to capture every photo
         imageUrls.push(publicUrl);
+        console.log(`Successfully captured URL: ${publicUrl}`);
       }
 
       // 2. Save Item Details to Database
+      console.log('Sending data to Database...');
       const { error: dbError } = await supabase
         .from('items')
         .insert([
@@ -73,18 +81,23 @@ export default function PostItemPage() {
             description,
             price: parseFloat(price),
             category,
-            image_urls: imageUrls, 
-            created_at: new Date(),
+            image_urls: imageUrls, // Now contains the full list of URLs
+            created_at: new Date().toISOString(),
           },
         ]);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database Insert Error:', dbError);
+        throw dbError;
+      }
 
+      console.log('Post successful! Redirecting...');
       router.push('/browse');
       router.refresh();
+
     } catch (error) {
       console.error('Error posting item:', error);
-      alert('Failed to post item. Check console for details.');
+      alert('Failed to post item. Check the browser console (F12) for details.');
     } finally {
       setIsUploading(false);
     }
@@ -93,14 +106,13 @@ export default function PostItemPage() {
   return (
     <div className="max-w-2xl mx-auto p-6 bg-slate-900 text-white rounded-lg shadow-xl mt-10">
       <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
-        <Camera className="text-blue-400" /> Post New Junk
+        Absolute <Camera className="text-blue-400" /> Post New Item
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Image Upload Area */}
         <div className="border-2 border-dashed border-slate-700 p-4 rounded-lg bg-slate-800/50">
           <label className="block text-sm font-medium mb-2 text-slate-300">Item Photos</label>
-          
           <div className="grid grid-cols-3 gap-4 mb-4">
             {previews.map((url, index) => (
               <div key={index} className="relative aspect-square rounded-md overflow-hidden border border-slate-600">
@@ -114,11 +126,16 @@ export default function PostItemPage() {
                 </button>
               </div>
             ))}
-            
             <label className="flex flex-col items-center justify-center aspect-square rounded-md border border-slate-600 bg-slate-700/50 cursor-pointer hover:bg-slate-700 transition">
               <Upload className="text-slate-400 mb-1" size={24} />
               <span className="text-xs text-slate-400">Add Photo</span>
-              <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleImageChange} 
+              />
             </label>
           </div>
         </div>
@@ -141,12 +158,14 @@ export default function PostItemPage() {
             <input
               required
               type="number"
+              step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               className="w-full p-3 bg-slate-800 border border-slate-700 rounded focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="0.00"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Category</label>
             <select
@@ -190,4 +209,3 @@ export default function PostItemPage() {
     </div>
   );
 }
-
