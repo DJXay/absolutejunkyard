@@ -11,7 +11,7 @@ export default function BrowsePage() {
   const supabase = createClientComponentClient();
 
   // Your Stripe Payment Link
-  const STRIPE_PAYMENT_URL = "https://buy.stripe.com/YOUR_LINK_HERE";
+  const STRIPE_PAYMENT_URL = "https://buy.stripe.com/test_4gMfZh14xgqF4igck00sU00";
 
   // Fetch only AVAILABLE items from Supabase
   useEffect(() => {
