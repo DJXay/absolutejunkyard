@@ -8,7 +8,7 @@ export default function HomePage() {
             Absolute Junkyard
           </h1>
           <p className="text-xl text-slate-300">
-            Post, Browse, and Trade. One man's JJunk is another man's treasure.
+            Post, Browse, and Trade. One man's Junk is another man's treasure.
           </p>
         </div>
       </div>
