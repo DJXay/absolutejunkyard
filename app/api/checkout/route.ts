@@ -1,17 +1,16 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// HARDCODE the key here to save a 'lookup' step on a slow connection
-const stripe = new Stripe('sk_test_51Q...', { 
-  apiVersion: '2023-10-16' as any,
+// Use the modern API version that matches your Stripe v15 library
+const stripe = new Stripe('sk_test_YOUR_KEY_HERE', {
+  apiVersion: '2024-04-10', 
 });
 
 export async function POST(req: Request) {
   try {
     const { itemId, itemTitle } = await req.json();
 
-    // Use a hardcoded string for the URL instead of looking up environment variables
-    // This removes any chance of the server failing to read 'process.env'
+    // Direct hardcoded URL to eliminate DNS lookups or Env var delays
     const siteUrl = 'https://absolutejunkyardnetlifycom.netlify.app';
 
     const session = await stripe.checkout.sessions.create({
@@ -32,10 +31,13 @@ export async function POST(req: Request) {
       cancel_url: `${siteUrl}/post?canceled=true`,
     });
 
+    if (!session.url) throw new Error("No URL from Stripe");
+
     return NextResponse.json({ url: session.url });
 
   } catch (err: any) {
-    console.error('Stripe Error:', err.message);
+    console.error('SERVER_ERROR:', err.message);
+    // This will send the EXACT Stripe error back to your console
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
