@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY=sk_test_51TDbggDaPSp14Wyj1ADwpuSUSRuBLfyXNcZ5xqMMBpqjjqMgk8ndV9bTOk3rITLZ6ZypBAWznDyOBllCaVKrF6FD00MKLJvqww
-, {
+// Using your hardcoded key here temporarily as an 'Admin Bypass'
+const stripe = new Stripe('STRIPE_SECRET_KEY=sk_test_51TDbggDaPSp14Wyj1ADwpuSUSRuBLfyXNcZ5xqMMBpqjjqMgk8ndV9bTOk3rITLZ6ZypBAWznDyOBllCaVKrF6FD00MKLJvqww
+', {
   apiVersion: '2023-10-16' as any,
 });
 
@@ -10,7 +11,9 @@ export async function POST(req: Request) {
   try {
     const { itemId, itemTitle } = await req.json();
 
-    // Create a Stripe Checkout Session for the $1.00 Listing Fee
+    // The 'Safety Net': Use your Netlify URL directly if the variable is missing
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://absolutejunkyardnetlifycom.netlify.app';
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -31,14 +34,21 @@ export async function POST(req: Request) {
         itemId: itemId,
         type: 'seller_listing_fee',
       },
-      // CHANGED: Using SITE_URL to match your Netlify environment
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/browse?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/post?canceled=true`,
+      // Using the Safety Net URL for the return paths
+      success_url: `${baseUrl}/browse?success=true`,
+      cancel_url: `${baseUrl}/post?canceled=true`,
     });
 
+    // Check if Stripe actually gave us a URL
+    if (!session.url) {
+      throw new Error("Stripe failed to return a checkout URL");
+    }
+
     return NextResponse.json({ url: session.url });
+
   } catch (err: any) {
     console.error('Stripe Session Error:', err);
+    // This sends the actual Stripe error back to your browser console (F12)
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
