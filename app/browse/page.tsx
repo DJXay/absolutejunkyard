@@ -2,25 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Search, Package, Image as ImageIcon, Loader2, CreditCard } from 'lucide-react';
+import { Search, Package, Image as ImageIcon, Loader2, MessageSquare } from 'lucide-react';
 
 export default function BrowsePage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const supabase = createClientComponentClient();
 
-  // Your Stripe Payment Link
-  const STRIPE_PAYMENT_URL = "https://buy.stripe.com/test_4gMfZh14xgqF4igck00sU00";
-
-  // Fetch only AVAILABLE items from Supabase
+  // Fetch only items that have been "unlocked" by the seller's $1 payment
   useEffect(() => {
     async function fetchItems() {
       try {
         const { data, error } = await supabase
           .from('items')
           .select('*')
-          .eq('status', 'available') // Only show items not yet reserved
+          .eq('status', 'available') // Only show paid/public listings
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -35,41 +31,21 @@ export default function BrowsePage() {
     fetchItems();
   }, [supabase]);
 
-  // Handle the $1.00 Commitment Fee and reservation
-  const handleBuy = async (itemId: string) => {
-    setProcessingId(itemId);
-    
-    try {
-      // 1. Mark the item as 'pending' in the database
-      const { error } = await supabase
-        .from('items')
-        .update({ status: 'pending' })
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      // 2. Redirect to Stripe for the $1.00 fee
-      window.location.href = STRIPE_PAYMENT_URL;
-      
-    } catch (error) {
-      console.error("Error reserving item:", error);
-      alert("This item may have just been reserved. Refreshing...");
-      window.location.reload();
-    } finally {
-      setProcessingId(null);
-    }
+  // Handle local contact/interest (Future messaging feature)
+  const handleContact = (itemTitle: string) => {
+    alert(`Interested in the ${itemTitle}? This would typically open a chat window with the seller for local pickup.`);
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Top Search Bar Area */}
+      {/* Header Area */}
       <div className="bg-white border-b border-slate-200 p-6 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 items-center">
           <h2 className="text-2xl font-black text-slate-900 shrink-0 tracking-tighter">ABSOLUTE JUNKYARD</h2>
           <div className="relative w-full">
             <input 
               type="text" 
-              placeholder="Search for treasures..." 
+              placeholder="Search for local treasures..." 
               className="w-full p-3 pl-10 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none text-slate-900"
             />
             <Search className="absolute left-3 top-3.5 text-slate-400" size={20} />
@@ -79,7 +55,7 @@ export default function BrowsePage() {
 
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8 p-6">
         
-        {/* Sidebar Filters */}
+        {/* Category Sidebar */}
         <aside className="w-full md:w-64 space-y-8 shrink-0">
           <div>
             <h3 className="font-bold text-slate-700 mb-4 uppercase text-xs tracking-widest">Categories</h3>
@@ -106,13 +82,13 @@ export default function BrowsePage() {
           ) : items.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
               <Package className="mx-auto text-slate-300 mb-4" size={64} />
-              <p className="text-slate-500 text-lg">No treasures found right now.</p>
+              <p className="text-slate-500 text-lg">No treasures currently available in your area.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {items.map((item) => (
                 <div key={item.id} className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300">
-                  {/* Image Display */}
+                  {/* Photo Section */}
                   <div className="h-52 bg-slate-100 overflow-hidden flex items-center justify-center relative">
                     {item.image_urls && item.image_urls.length > 0 ? (
                       <img 
@@ -140,22 +116,17 @@ export default function BrowsePage() {
                     <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100">
                       <div className="flex flex-col">
                         <span className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Price</span>
-                        <span className="text-2xl font-black text-blue-600">
+                        <span className="text-2xl font-black text-green-600">
                           ${item.price.toFixed(2)}
                         </span>
                       </div>
                       
                       <button 
-                        onClick={() => handleBuy(item.id)}
-                        disabled={processingId !== null}
-                        className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                        onClick={() => handleContact(item.title)}
+                        className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all flex items-center gap-2"
                       >
-                        {processingId === item.id ? (
-                          <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                          <CreditCard size={16} />
-                        )}
-                        Buy ($1.00)
+                        <MessageSquare size={16} />
+                        Contact
                       </button>
                     </div>
                   </div>
